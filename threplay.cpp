@@ -9,7 +9,10 @@ void th_decrypt(unsigned char * buffer, int length, int block_size, unsigned cha
 unsigned int th_unlzss(unsigned char * buffer, unsigned char * decode, unsigned int length);
 
 void get_th06(Napi::Object& out, uint8_t* buf, size_t len, Napi::Env& env) {
-	out.Set("game", "th06");
+	out.Set("game", 0);
+	char ver[7] = "      ";
+	snprintf(ver, 7, "%#.2hhx%.2hhx", buffer[0x05], buffer[0x04]);
+	out.Set("version", ver);
 	
 	th06_replay_header_t* rep_raw = (th06_replay_header_t*)buf;
 	size_t size = len - offsetof(th06_replay_header_t, crypted_data);
@@ -21,8 +24,12 @@ void get_th06(Napi::Object& out, uint8_t* buf, size_t len, Napi::Env& env) {
 	
 	// Replay name
 	out.Set("name", rep->name);
-	// Date
-	out.Set("date", rep->date);
+	// Date - formatted as ISO
+	char date[11] = "2000-01-01";
+	memcpy(date+2, rep->date[6], 2);
+	memcpy(date+5, rep->date, 2);
+	memcpy(date+8, rep->date[3], 2);
+	out.Set("date", date);
 	// Score
 	out.Set("score", rep->score);
 	out.Set("slowdown", rep->slowdown);
@@ -53,11 +60,14 @@ void get_th06(Napi::Object& out, uint8_t* buf, size_t len, Napi::Env& env) {
 			stage_.Set("power", stage->power);
 			stage_.Set("lives", stage->lives);
 			stage_.Set("bombs", stage->bombs);
+			state_.Set("rank", stage->rank);
 
 			stages.Set(i, stage_);
 		}
 	}
-	out.Set("stages", stages);	
+	out.Set("stages", stages);
+
+	free(rep_dec);
 }
 
 void get_th13(Napi::Object& out, uint8_t* buf, size_t len, Napi::Env& env) {
